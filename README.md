@@ -5,9 +5,13 @@ This Streamlit application leverages OpenAI's GPT-3.5 model to provide several t
 1. **Generate Poem**
 - Description: Allows users to generate poems based on specified style, mood, tone, and purpose.
 - Options:
+  
 -- Choose from poem styles such as classic, modern, haiku, free verse, etc.
+  
 -- Select mood (happy, sad, romantic, inspirational, nostalgic).
+
 -- Choose tone (formal, informal, serious, humorous, etc.).
+
 -- Specify the purpose of the poem (e.g., gift, personal reflection, celebration).
 
 2. **Recapitalize Text**
@@ -43,4 +47,5 @@ Usage: Users input their query, and the model provides relevant responses or inf
 
 ### Credits
 Developed by **Kavya Agrawal**.
+
 Powered by OpenAI GPT-3.5.
