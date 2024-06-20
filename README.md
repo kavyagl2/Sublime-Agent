@@ -1,3 +1,5 @@
+# SUBLIME AGENT
+
 ### Overview
 This Streamlit application leverages OpenAI's GPT-3.5 model to provide several text-related services, including generating poems, recapitalizing text, and responding to user queries. Users can interactively select options to generate poems of different styles, moods, tones, and purposes, recapitalize text, or get responses to their queries.
 
@@ -32,7 +34,7 @@ Usage: Users input their query, and the model provides relevant responses or inf
 
 ### Setup
 - Clone the repository.
-- Install dependencies using pip install -r requirements.txt.
+- Install dependencies.
 - Create a .env file with your OpenAI API key (OPENAI_API_KEY=your_api_key).
 - Run the app locally with streamlit run app.py.
 
