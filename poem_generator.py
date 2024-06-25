@@ -36,28 +36,37 @@ def trim_poem(poem):
 
 # Function to recapitalize text following "capitalize text"
 def recapitalize(text):
-    command = "capitalize text"
-    text_to_capitalize = text.split(command)[-1].strip()
-    return text_to_capitalize.upper()
+    return text.upper()
 
 # Function to decapitalize text following "decapitalize text"
 def decapitalize(text):
-    command = "decapitalize text"
-    text_to_decapitalize = text.split(command)[-1].strip()
-    return text_to_decapitalize.lower()
+    return text.lower()
 
-# Function to determine the intent of the user's query
+# Function to determine the intents of the user's query
 def determine_intent(user_query):
-    prompt = f"Classify the following user query into one of these categories: generate a poem, trim a poem, capitalize text, decapitalize text, general query.\n\nUser query: {user_query}\n\nCategory:"
+    prompt = f"Classify the following user query into one or more of these categories: generate a poem, trim a poem, capitalize text, decapitalize text, poem query, general query.\n\nUser query: {user_query}\n\nCategories (comma-separated if multiple):"
     response = openai.chat.completions.create(
         model="gpt-4-turbo",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that classifies user queries."},
+            {"role": "system", "content": "You are a helpful assistant that classifies user queries. Make sure that you are able to identify what services user is asking to render, there may be many services at once that user wants."},
             {"role": "user", "content": prompt}
         ]
     )
-    intent = response.choices[0].message.content.strip().lower()
-    return intent
+    intents = response.choices[0].message.content.strip().lower().split(', ')
+    return intents
+
+# Function to handle queries about the generated poem
+def handle_poem_query(poem, user_query):
+    prompt = f"Here is a poem:\n\n{poem}\n\nThe user has a question about the poem: {user_query}\n\nAnswer the question in a helpful manner:"
+    response = openai.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that analyzes poems."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    answer = response.choices[0].message.content.strip()
+    return answer
 
 # Main Streamlit app
 def main():
@@ -66,8 +75,10 @@ def main():
     # Initialize session state variables
     if "conversation_log" not in st.session_state:
         st.session_state.conversation_log = []
-    if "intent" not in st.session_state:
-        st.session_state.intent = None
+    if "intents" not in st.session_state:
+        st.session_state.intents = None
+    if "generated_poem" not in st.session_state:
+        st.session_state.generated_poem = None
 
     # User input for query
     user_query = st.text_input("You:", key="user_query")
@@ -76,109 +87,90 @@ def main():
     if st.button("Send", key="submit_button"):
         unique_id = str(uuid.uuid4())
         st.session_state.conversation_log.append({"id": unique_id, "role": "user", "content": user_query})
-        st.session_state.intent = determine_intent(user_query)
+        st.session_state.intents = determine_intent(user_query)
 
     # Handle intents
-    if st.session_state.intent == "generate a poem":
-        st.write("Poetic to Phoenix: Processing your request to generate a poem...")
-        st.write("Please specify the poem details below:")
-        # Dropdowns for poem details
-        st.session_state.style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"], key="select_style")
-        st.session_state.mood = st.selectbox("Mood:", ["happy", "sad", "romantic", "inspirational", "nostalgic"], key="select_mood")
-        st.session_state.tone = st.selectbox("Tone:", ["formal", "informal", "serious", "humorous", "sentimental", "playful"], key="select_tone")
-        st.session_state.purpose = st.selectbox(
-            "Purpose:",
-            [
-                "a gift", "personal reflection", "a celebration", "a memorial", "a story",
-                "parents", "siblings", "lovers", "friends", "children",
-                "colleagues", "a special occasion", "a wedding", "an anniversary",
-                "a birthday", "a graduation", "a farewell", "encouragement",
-                "appreciation", "apology", "condolence", "retirement",
-                "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
-            ], key="select_purpose"
-        )
+    if st.session_state.intents:
+        if "generate a poem" in st.session_state.intents:
+            st.write("Poetic to Phoenix: Processing your request to generate a poem...")
+            st.write("Please specify the poem details below:")
+            # Dropdowns for poem details
+            st.session_state.style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"], key="select_style")
+            st.session_state.mood = st.selectbox("Mood:", ["happy", "sad", "romantic", "inspirational", "nostalgic"], key="select_mood")
+            st.session_state.tone = st.selectbox("Tone:", ["formal", "informal", "serious", "humorous", "sentimental", "playful"], key="select_tone")
+            st.session_state.purpose = st.selectbox(
+                "Purpose:",
+                [
+                    "a gift", "personal reflection", "a celebration", "a memorial", "a story",
+                    "parents", "siblings", "lovers", "friends", "children",
+                    "colleagues", "a special occasion", "a wedding", "an anniversary",
+                    "a birthday", "a graduation", "a farewell", "encouragement",
+                    "appreciation", "apology", "condolence", "retirement",
+                    "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
+                ], key="select_purpose"
+            )
 
-        # Generate poem button
-        if st.session_state.style and st.session_state.mood and st.session_state.purpose and st.session_state.tone:
-            if st.button("Generate Poem", key="generate_button"):
-                prompt = user_query
-                poem, source = generate_poem(prompt, style=st.session_state.style, mood=st.session_state.mood,
-                                             purpose=st.session_state.purpose, tone=st.session_state.tone)
-                unique_id = str(uuid.uuid4())
-                st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem})
-                st.write("Poetic to Phoenix:")
-                st.write(poem)
-                st.caption(f"Source: {source}")
+            # Generate poem button
+            if st.session_state.style and st.session_state.mood and st.session_state.purpose and st.session_state.tone:
+                if st.button("Generate Poem", key="generate_button"):
+                    prompt = user_query
+                    poem, source = generate_poem(prompt, style=st.session_state.style, mood=st.session_state.mood,
+                                                 purpose=st.session_state.purpose, tone=st.session_state.tone)
+                    st.session_state.generated_poem = poem
+                    unique_id = str(uuid.uuid4())
+                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem})
+                    st.write("Poetic to Phoenix:")
+                    st.write(poem)
+                    st.caption(f"Source: {source}")
 
-    elif st.session_state.intent == "trim a poem":
-        st.write("Poetic to Phoenix: Trimming the poem as requested...")
-        # Find the most recent poem generated in the conversation log
-        recent_poem = ""
-        for message in reversed(st.session_state.conversation_log):
-            if message['role'] == "system" and message['content']:
-                recent_poem = message['content']
-                break
-
-        if recent_poem:
-            trimmed_poem = trim_poem(recent_poem)
+        if "trim a poem" in st.session_state.intents and st.session_state.generated_poem:
+            st.write("Poetic to Phoenix: Trimming the poem as requested...")
+            trimmed_poem = trim_poem(st.session_state.generated_poem)
+            #st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": trimmed_poem})
             st.write("Poetic to Phoenix:")
             st.write(trimmed_poem)
-        else:
-            st.write("Poetic to Phoenix: Sorry, I couldn't find a poem to trim.")
 
-    elif st.session_state.intent == "capitalize text":
-        st.write("Poetic to Phoenix: Capitalizing the text as requested...")
-        # Find the most recent system message in the conversation log (assumed to be the poem)
-        recent_message = None
-        for message in reversed(st.session_state.conversation_log):
-            if message['role'] == "system":
-                recent_message = message
-                break
-        
-        if recent_message:
-            capitalized_text = recapitalize(recent_message['content'])
+        if "capitalize text" in st.session_state.intents and st.session_state.generated_poem:
+            st.write("Poetic to Phoenix: Capitalizing the text as requested...")
+            capitalized_text = recapitalize(st.session_state.generated_poem)
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": capitalized_text})
             st.write("Poetic to Phoenix:")
             st.write(capitalized_text)
-        else:
-            st.write("Poetic to Phoenix: Sorry, I couldn't find text to capitalize.")
 
-    elif st.session_state.intent == "decapitalize text":
-        st.write("Poetic to Phoenix: Decapitalizing the text as requested...")
-        # Find the most recent system message in the conversation log (assumed to be the poem)
-        recent_message = None
-        for message in reversed(st.session_state.conversation_log):
-            if message['role'] == "system":
-                recent_message = message
-                break
-        
-        if recent_message:
-            decapitalized_text = decapitalize(recent_message['content'])
+        if "decapitalize text" in st.session_state.intents and st.session_state.generated_poem:
+            st.write("Poetic to Phoenix: Decapitalizing the text as requested...")
+            decapitalized_text = decapitalize(st.session_state.generated_poem)
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": decapitalized_text})
             st.write("Poetic to Phoenix:")
             st.write(decapitalized_text)
-        else:
-            st.write("Poetic to Phoenix: Sorry, I couldn't find text to decapitalize.")
 
-    elif st.session_state.intent == "general query":
-        st.write("Poetic to Phoenix: Routing your query to GPT...")
-        response = openai.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system",
-                 "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
-                {"role": "user", "content": user_query}
-            ]
-        )
-        gpt_response = response.choices[0].message.content.strip()
-        unique_id = str(uuid.uuid4())
-        st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": gpt_response})
-        st.write("Poetic to Phoenix:")
-        st.write(gpt_response)
+        if "poem query" in st.session_state.intents and st.session_state.generated_poem:
+            st.write("Poetic to Phoenix: Analyzing the poem...")
+            answer = handle_poem_query(st.session_state.generated_poem, user_query)
+            unique_id = str(uuid.uuid4())
+            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": answer})
+            st.write("Poetic to Phoenix:")
+            st.write(answer)
+
+        if "general query" in st.session_state.intents:
+            st.write("Poetic to Phoenix: Routing your query to GPT...")
+            response = openai.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=[
+                    {"role": "system",
+                     "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
+                    {"role": "user", "content": user_query}
+                ]
+            )
+            gpt_response = response.choices[0].message.content.strip()
+            unique_id = str(uuid.uuid4())
+            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": gpt_response})
+            st.write("Poetic to Phoenix:")
+            st.write(gpt_response)
 
     # Display conversation log
     st.header("Conversation Log")
