@@ -126,7 +126,7 @@ def main():
         if "trim a poem" in st.session_state.intents and st.session_state.generated_poem:
             st.write("Poetic to Phoenix: Trimming the poem as requested...")
             trimmed_poem = trim_poem(st.session_state.generated_poem)
-            #st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
+            st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": trimmed_poem})
             st.write("Poetic to Phoenix:")
