@@ -52,7 +52,7 @@ def determine_intent(user_query):
             {"role": "user", "content": prompt}
         ]
     )
-    intents = response.choices[0].message.content.strip().lower().split(', ')
+    intents = response.choices[0].message.content.strip().lower().replace("then", ",").replace("and", ",").split(', ')
     return intents
 
 # Function to handle queries about the generated poem
@@ -70,7 +70,7 @@ def handle_poem_query(poem, user_query):
 
 # Main Streamlit app
 def main():
-    st.title("Poetic to Phoenix: A Versatile AI Poet")
+    st.title("Sublime Agent: A Versatile AI Poet")
 
     # Initialize session state variables
     if "conversation_log" not in st.session_state:
@@ -79,6 +79,10 @@ def main():
         st.session_state.intents = None
     if "generated_poem" not in st.session_state:
         st.session_state.generated_poem = None
+    if "poem_state" not in st.session_state:
+        st.session_state.poem_state = "original"
+    if "actions_done" not in st.session_state:
+        st.session_state.actions_done = []
 
     # User input for query
     user_query = st.text_input("You:", key="user_query")
@@ -91,8 +95,8 @@ def main():
 
     # Handle intents
     if st.session_state.intents:
-        if "generate a poem" in st.session_state.intents:
-            st.write("Poetic to Phoenix: Processing your request to generate a poem...")
+        if "generate a poem" in st.session_state.intents and "generate a poem" not in st.session_state.actions_done:
+            st.write("Sublime Agent: Processing your request to generate a poem...")
             st.write("Please specify the poem details below:")
             # Dropdowns for poem details
             st.session_state.style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"], key="select_style")
@@ -117,59 +121,68 @@ def main():
                     poem, source = generate_poem(prompt, style=st.session_state.style, mood=st.session_state.mood,
                                                  purpose=st.session_state.purpose, tone=st.session_state.tone)
                     st.session_state.generated_poem = poem
+                    st.session_state.poem_state = "original"
+                    st.session_state.actions_done.append("generate a poem")
                     unique_id = str(uuid.uuid4())
                     st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem})
-                    st.write("Poetic to Phoenix:")
+                    st.write("Sublime Agent:")
                     st.write(poem)
                     st.caption(f"Source: {source}")
 
-        if "trim a poem" in st.session_state.intents and st.session_state.generated_poem:
-            st.write("Poetic to Phoenix: Trimming the poem as requested...")
+        if "trim a poem" in st.session_state.intents and "trim a poem" not in st.session_state.actions_done and st.session_state.generated_poem:
+            st.write("Sublime Agent: Trimming the poem as requested...")
             trimmed_poem = trim_poem(st.session_state.generated_poem)
             st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
+            st.session_state.poem_state = "trimmed"
+            st.session_state.actions_done.append("trim a poem")
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": trimmed_poem})
-            st.write("Poetic to Phoenix:")
+            st.write("Sublime Agent:")
             st.write(trimmed_poem)
 
-        if "capitalize text" in st.session_state.intents and st.session_state.generated_poem:
-            st.write("Poetic to Phoenix: Capitalizing the text as requested...")
+        if "capitalize text" in st.session_state.intents and "capitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
+            st.write("Sublime Agent: Capitalizing the text as requested...")
             capitalized_text = recapitalize(st.session_state.generated_poem)
+            st.session_state.generated_poem = capitalized_text
+            st.session_state.poem_state = "capitalized"
+            st.session_state.actions_done.append("capitalize text")
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": capitalized_text})
-            st.write("Poetic to Phoenix:")
+            st.write("Sublime Agent:")
             st.write(capitalized_text)
 
-        if "decapitalize text" in st.session_state.intents and st.session_state.generated_poem:
-            st.write("Poetic to Phoenix: Decapitalizing the text as requested...")
+        if "decapitalize text" in st.session_state.intents and "decapitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
+            st.write("Sublime Agent: Decapitalizing the text as requested...")
             decapitalized_text = decapitalize(st.session_state.generated_poem)
+            st.session_state.generated_poem = decapitalized_text
+            st.session_state.poem_state = "decapitalized"
+            st.session_state.actions_done.append("decapitalize text")
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": decapitalized_text})
-            st.write("Poetic to Phoenix:")
+            st.write("Sublime Agent:")
             st.write(decapitalized_text)
 
         if "poem query" in st.session_state.intents and st.session_state.generated_poem:
-            st.write("Poetic to Phoenix: Analyzing the poem...")
-            answer = handle_poem_query(st.session_state.generated_poem, user_query)
+            st.write("Sublime Agent: Answering your poem query...")
+            poem_query_response = handle_poem_query(st.session_state.generated_poem, user_query)
             unique_id = str(uuid.uuid4())
-            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": answer})
-            st.write("Poetic to Phoenix:")
-            st.write(answer)
+            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem_query_response})
+            st.write("Sublime Agent:")
+            st.write(poem_query_response)
 
         if "general query" in st.session_state.intents:
-            st.write("Poetic to Phoenix: Routing your query to GPT...")
+            st.write("Sublime Agent: Routing your query to GPT...")
             response = openai.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
-                    {"role": "system",
-                     "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
+                    {"role": "system", "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
                     {"role": "user", "content": user_query}
                 ]
             )
             gpt_response = response.choices[0].message.content.strip()
             unique_id = str(uuid.uuid4())
             st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": gpt_response})
-            st.write("Poetic to Phoenix:")
+            st.write("Sublime Agent:")
             st.write(gpt_response)
 
     # Display conversation log
@@ -178,7 +191,7 @@ def main():
         if message['role'] == "user":
             st.text_area("You:", message['content'], key=message['id'])
         elif message['role'] == "system":
-            st.text_area("Poetic to Phoenix:", message['content'], key=message['id'])
+            st.text_area("Sublime Agent:", message['content'], key=message['id'])
 
 if __name__ == "__main__":
     main()
