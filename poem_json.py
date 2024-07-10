@@ -104,8 +104,8 @@ def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
         tool_choice={"type": "funtion", "function": {"name": {"generate_poem"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call["function"]["arguments"])
-    return function_args["content"], "This poem is an original creation by GPT-4"
+    function_args = json.loads(tool_call)
+    return (function_args["content"]), "This poem is an original creation by GPT-4"
 
 # Function to manually trim the poem by merging alternate lines
 def trim_poem(poem):
@@ -120,8 +120,8 @@ def trim_poem(poem):
         tool_choice= {"type": "funtion", "function": {"name": {"trim_poem"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call["function"]["arguments"])
-    return function_args["trimmed_poem"]
+    function_args = json.loads(tool_call)
+    return (function_args["trimmed_poem"])
 
 # Function to capitalize text following "capitalize text"
 def recapitalize(text):
@@ -136,8 +136,8 @@ def recapitalize(text):
         tool_choice={"type": "funtion", "function": {"name": {"recapitalize"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call["function"]["arguments"])
-    return function_args["capitalized_text"]
+    function_args = json.loads(tool_call)
+    return (function_args["capitalized_text"])
 
 # Function to decapitalize text following "decapitalize text"
 def decapitalize(text):
@@ -152,8 +152,8 @@ def decapitalize(text):
         tool_choice={"type": "funtion", "function": {"name": {"decapitalize"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call["function"]["arguments"])
-    return function_args["decapitalized_text"]
+    function_args = json.loads(tool_call)
+    return (function_args["decapitalized_text"])
 
 # Function to handle queries about the generated poem
 def handle_poem_query(poem, user_query):
@@ -169,8 +169,8 @@ def handle_poem_query(poem, user_query):
         tool_choice={"type": "funtion", "function": {"name": {"handle_poem_query"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call["function"]["arguments"])
-    return function_args["content"]
+    function_args = json.loads(tool_call)
+    return (function_args["content"])
 
 # Function to determine the intents of the user's query using function calling
 def determine_intent(user_query):
@@ -215,8 +215,8 @@ def determine_intent(user_query):
     )
     
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call["function"]["arguments"])
-    return function_args["categories"]
+    function_args = json.loads(tool_call)
+    return (function_args["categories"])
 
 # Main Streamlit app
 def main():
