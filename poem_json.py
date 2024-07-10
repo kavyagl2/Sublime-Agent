@@ -100,11 +100,11 @@ def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
             {"role": "user", "content": prompt_details}
         ],
         tools=tools,
-        response_format = json,
+        response_format={"type": "json_object"},
         tool_choice={"type": "funtion", "function": {"name": {"generate_poem"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
+    function_args = json.loads(tool_call["function"]["arguments"])
     return function_args["content"], "This poem is an original creation by GPT-4"
 
 # Function to manually trim the poem by merging alternate lines
@@ -116,11 +116,11 @@ def trim_poem(poem):
             {"role": "user", "content": poem}
         ],
         tools=tools,
-        response_format = json,
+        response_format={"type": "json_object"},
         tool_choice= {"type": "funtion", "function": {"name": {"trim_poem"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
+    function_args = json.loads(tool_call["function"]["arguments"])
     return function_args["trimmed_poem"]
 
 # Function to capitalize text following "capitalize text"
@@ -132,11 +132,11 @@ def recapitalize(text):
             {"role": "user", "content": text}
         ],
         tools=tools,
-        response_format = json,
+        response_format={"type": "json_object"},
         tool_choice={"type": "funtion", "function": {"name": {"recapitalize"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
+    function_args = json.loads(tool_call["function"]["arguments"])
     return function_args["capitalized_text"]
 
 # Function to decapitalize text following "decapitalize text"
@@ -148,11 +148,11 @@ def decapitalize(text):
             {"role": "user", "content": text}
         ],
         tools=tools,
-        response_format = json,
+        response_format={"type": "json_object"},
         tool_choice={"type": "funtion", "function": {"name": {"decapitalize"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
+    function_args = json.loads(tool_call["function"]["arguments"])
     return function_args["decapitalized_text"]
 
 # Function to handle queries about the generated poem
@@ -165,11 +165,11 @@ def handle_poem_query(poem, user_query):
             {"role": "user", "content": prompt}
         ],
         tools=tools,
-        response_format = json,
+        response_format={"type": "json_object"},
         tool_choice={"type": "funtion", "function": {"name": {"handle_poem_query"}}}
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
+    function_args = json.loads(tool_call["function"]["arguments"])
     return function_args["content"]
 
 # Function to determine the intents of the user's query using function calling
@@ -215,7 +215,7 @@ def determine_intent(user_query):
     )
     
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
+    function_args = json.loads(tool_call["function"]["arguments"])
     return function_args["categories"]
 
 # Main Streamlit app
