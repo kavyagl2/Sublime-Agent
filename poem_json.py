@@ -4,13 +4,91 @@ from dotenv import load_dotenv
 import os
 import uuid
 import json
-from jsonschema import validate, ValidationError
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Set up OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Define tools for each function
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_poem",
+            "description": "Generate a poem with specified details.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string"},
+                    "style": {"type": "string"},
+                    "mood": {"type": "string"},
+                    "purpose": {"type": "string"},
+                    "tone": {"type": "string"}
+                },
+                "required": ["prompt"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "trim_poem",
+            "description": "Trim a given poem by merging alternate lines.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "poem": {"type": "string"}
+                },
+                "required": ["poem"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recapitalize",
+            "description": "Capitalize text.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"}
+                },
+                "required": ["text"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "decapitalize",
+            "description": "Decapitalize text.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"}
+                },
+                "required": ["text"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "handle_poem_query",
+            "description": "Handle queries about the generated poem.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "poem": {"type": "string"},
+                    "user_query": {"type": "string"}
+                },
+                "required": ["poem", "user_query"]
+            }
+        }
+    }
+]
 
 # Function to generate a poem from a prompt with specified details
 def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
@@ -20,42 +98,62 @@ def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
         messages=[
             {"role": "system", "content": "You are a creative poet."},
             {"role": "user", "content": prompt_details}
-        ]
+        ],
+        tools=tools,
+        response_format = json,
+        tool_choice={"type": "funtion", "function": {"name": {"generate_poem"}}}
     )
-    poem = response.choices[0].message.content.strip()
-    return poem, "This poem is an original creation by GPT-4"
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_args = json.loads(tool_call.function.arguments)
+    return function_args["content"], "This poem is an original creation by GPT-4"
 
 # Function to manually trim the poem by merging alternate lines
 def trim_poem(poem):
-    lines = poem.strip().split('\n')
-    trimmed_poem = []
-    for i in range(0, len(lines), 2):
-        if i + 1 < len(lines):
-            trimmed_poem.append(lines[i] + " " + lines[i + 1])
-        else:
-            trimmed_poem.append(lines[i])
-    return '\n'.join(trimmed_poem)
-
-# Function to recapitalize text following "capitalize text"
-def recapitalize(text):
-    return text.upper()
-
-# Function to decapitalize text following "decapitalize text"
-def decapitalize(text):
-    return text.lower()
-
-# Function to determine the intents of the user's query
-def determine_intent(user_query):
-    prompt = f"Classify the following user query into one or more of these categories: generate a poem, trim a poem, capitalize text, decapitalize text, poem query, general query.\n\nUser query: {user_query}\n\nCategories (comma-separated if multiple):"
     response = openai.chat.completions.create(
         model="gpt-4-turbo",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that classifies user queries. Make sure that you are able to identify what services user is asking to render, there may be many services at once that user wants."},
-            {"role": "user", "content": prompt}
-        ]
+            {"role": "system", "content": "You are a helpful assistant that trims poems."},
+            {"role": "user", "content": poem}
+        ],
+        tools=tools,
+        response_format = json,
+        tool_choice= {"type": "funtion", "function": {"name": {"trim_poem"}}}
     )
-    intents = response.choices[0].message.content.strip().lower().replace("then", ",").replace("and", ",").split(', ')
-    return intents
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_args = json.loads(tool_call.function.arguments)
+    return function_args["trimmed_poem"]
+
+# Function to capitalize text following "capitalize text"
+def recapitalize(text):
+    response = openai.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that capitalizes text."},
+            {"role": "user", "content": text}
+        ],
+        tools=tools,
+        response_format = json,
+        tool_choice={"type": "funtion", "function": {"name": {"recapitalize"}}}
+    )
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_args = json.loads(tool_call.function.arguments)
+    return function_args["capitalized_text"]
+
+# Function to decapitalize text following "decapitalize text"
+def decapitalize(text):
+    response = openai.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that decapitalizes text."},
+            {"role": "user", "content": text}
+        ],
+        tools=tools,
+        response_format = json,
+        tool_choice={"type": "funtion", "function": {"name": {"decapitalize"}}}
+    )
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_args = json.loads(tool_call.function.arguments)
+    return function_args["decapitalized_text"]
 
 # Function to handle queries about the generated poem
 def handle_poem_query(poem, user_query):
@@ -65,78 +163,60 @@ def handle_poem_query(poem, user_query):
         messages=[
             {"role": "system", "content": "You are a helpful assistant that analyzes poems."},
             {"role": "user", "content": prompt}
-        ]
+        ],
+        tools=tools,
+        response_format = json,
+        tool_choice={"type": "funtion", "function": {"name": {"handle_poem_query"}}}
     )
-    answer = response.choices[0].message.content.strip()
-    return answer
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_args = json.loads(tool_call.function.arguments)
+    return function_args["content"]
 
-# Function to validate JSON input
-def validate_json_input(json_input, schema):
-    try:
-        validate(instance=json_input, schema=schema)
-        return True, None
-    except ValidationError as e:
-        return False, str(e)
-
-# Function to parse JSON input
-def parse_json_input(json_string):
-    try:
-        json_input = json.loads(json_string)
-        return json_input, None
-    except json.JSONDecodeError as e:
-        return None, str(e)
-
-# Function to construct JSON output
-def construct_json_output(poem, source):
-    output = {
-        "poem": poem,
-        "source": source
-    }
-    return json.dumps(output)
-
-# Function to handle the request and generate a response
-def handle_request(json_string):
-    # expected JSON schema
-    expected_json_schema = {
-        "type": "object",
-        "properties": {
-            "prompt": {"type": "string"},
-            "details": {
+# Function to determine the intents of the user's query using function calling
+def determine_intent(user_query):
+    function_name = "classify_intent"
+    classify_tool = {
+        "type": "function",
+        "function": {
+            "name": function_name,
+            "description": "Classify the user's query into one or more categories.",
+            "parameters": {
                 "type": "object",
                 "properties": {
-                    "style": {"type": "string"},
-                    "mood": {"type": "string"},
-                    "purpose": {"type": "string"},
-                    "tone": {"type": "string"}
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "List of categories for the query."
+                    }
                 },
-                "required": ["style", "mood", "purpose", "tone"]
+                "required": ["categories"]
             }
-        },
-        "required": ["prompt", "details"]
+        }
     }
 
-    # Step 1: Parse the JSON input
-    json_input, error = parse_json_input(json_string)
-    if error:
-        return {"error": f"Invalid JSON input: {error}"}
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that classifies user queries into categories.",
+        },
+        {
+            "role": "user",
+            "content": user_query,
+        },
+    ]
 
-    # Step 2: Validate the JSON input
-    is_valid, error = validate_json_input(json_input, expected_json_schema)
-    if not is_valid:
-        return {"error": f"JSON input does not conform to schema: {error}"}
-
-    # Extract details
-    prompt = json_input["prompt"]
-    details = json_input["details"]
-
-    # Generate the poem
-    poem, source = generate_poem(prompt, style=details["style"], mood=details["mood"], purpose=details["purpose"], tone=details["tone"])
-
-    if not poem:
-        return {"error": "Failed to generate poem"}
-
-    # Construct the JSON output
-    return construct_json_output(poem, source)
+    response = openai.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=messages,
+        tools=[classify_tool],
+        tool_choice={"type": "funtion", "function": {"name": {"classify_intent"}}}
+    )
+    
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_args = json.loads(tool_call.function.arguments)
+    return function_args["categories"]
 
 # Main Streamlit app
 def main():
@@ -169,91 +249,43 @@ def main():
             st.write("Sublime Agent: Processing your request to generate a poem...")
             st.write("Please specify the poem details below:")
             # Dropdowns for poem details
-            st.session_state.style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"], key="select_style")
-            st.session_state.mood = st.selectbox("Mood:", ["happy", "sad", "romantic", "inspirational", "nostalgic"], key="select_mood")
-            st.session_state.tone = st.selectbox("Tone:", ["formal", "informal", "serious", "humorous", "sentimental", "playful"], key="select_tone")
-            st.session_state.purpose = st.selectbox(
-                "Purpose:",
-                [
-                    "a gift", "personal reflection", "a celebration", "a memorial", "a story",
-                    "parents", "siblings", "lovers", "friends", "children",
-                    "colleagues", "a special occasion", "a wedding", "an anniversary",
-                    "a birthday", "a graduation", "a farewell", "encouragement",
-                    "appreciation", "apology", "condolence", "retirement",
-                    "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
-                ], key="select_purpose"
-            )
+            st.session_state.style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet"], key="style")
+            st.session_state.mood = st.selectbox("Mood:", ["happy", "sad", "angry", "romantic", "melancholic"], key="mood")
+            st.session_state.purpose = st.selectbox("Purpose:", ["personal", "professional", "celebration", "reflection", "gift"], key="purpose")
+            st.session_state.tone = st.selectbox("Tone:", ["formal", "informal", "serious", "light-hearted", "mysterious"], key="tone")
 
-            # Generate poem button
-            if st.session_state.style and st.session_state.mood and st.session_state.purpose and st.session_state.tone:
-                if st.button("Generate Poem", key="generate_button"):
-                    prompt = user_query
-                    poem, source = generate_poem(prompt, style=st.session_state.style, mood=st.session_state.mood,
-                                                 purpose=st.session_state.purpose, tone=st.session_state.tone)
-                    st.session_state.generated_poem = poem
-                    st.session_state.poem_state = "original"
-                    st.session_state.actions_done.append("generate a poem")
-                    unique_id = str(uuid.uuid4())
-                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem})
-                    st.write("Sublime Agent:")
-                    st.write(poem)
-                    st.caption(f"Source: {source}")
+            if st.button("Generate Poem", key="generate_poem_button"):
+                poem, _ = generate_poem(user_query, st.session_state.style, st.session_state.mood, st.session_state.purpose, st.session_state.tone)
+                st.session_state.generated_poem = poem
+                st.session_state.actions_done.append("generate a poem")
 
-        if "trim a poem" in st.session_state.intents and "trim a poem" not in st.session_state.actions_done and st.session_state.generated_poem:
-            st.write("Sublime Agent: Trimming the poem as requested...")
+        if st.session_state.generated_poem:
+            st.write("Sublime Agent: Here is your generated poem:")
+            st.write(st.session_state.generated_poem)
+
+        if "trim the poem" in st.session_state.intents and st.session_state.generated_poem and "trim the poem" not in st.session_state.actions_done:
+            st.write("Sublime Agent: Trimming the poem...")
             trimmed_poem = trim_poem(st.session_state.generated_poem)
-            st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
-            st.session_state.poem_state = "trimmed"
-            st.session_state.actions_done.append("trim a poem")
-            unique_id = str(uuid.uuid4())
-            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": trimmed_poem})
-            st.write("Sublime Agent:")
-            st.write(trimmed_poem)
+            st.session_state.generated_poem = trimmed_poem
+            st.session_state.actions_done.append("trim the poem")
 
-        if "capitalize text" in st.session_state.intents and "capitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
-            st.write("Sublime Agent: Capitalizing the text as requested...")
-            capitalized_text = recapitalize(st.session_state.generated_poem)
-            st.session_state.generated_poem = capitalized_text
-            st.session_state.poem_state = "capitalized"
-            st.session_state.actions_done.append("capitalize text")
-            unique_id = str(uuid.uuid4())
-            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": capitalized_text})
-            st.write("Sublime Agent:")
-            st.write(capitalized_text)
+        if "recapitalize" in st.session_state.intents and st.session_state.generated_poem and "recapitalize" not in st.session_state.actions_done:
+            st.write("Sublime Agent: Recapitalizing the text...")
+            recapitalized_text = recapitalize(st.session_state.generated_poem)
+            st.session_state.generated_poem = recapitalized_text
+            st.session_state.actions_done.append("recapitalize")
 
-        if "decapitalize text" in st.session_state.intents and "decapitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
-            st.write("Sublime Agent: Decapitalizing the text as requested...")
+        if "decapitalize" in st.session_state.intents and st.session_state.generated_poem and "decapitalize" not in st.session_state.actions_done:
+            st.write("Sublime Agent: Decapitalizing the text...")
             decapitalized_text = decapitalize(st.session_state.generated_poem)
             st.session_state.generated_poem = decapitalized_text
-            st.session_state.poem_state = "decapitalized"
-            st.session_state.actions_done.append("decapitalize text")
-            unique_id = str(uuid.uuid4())
-            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": decapitalized_text})
-            st.write("Sublime Agent:")
-            st.write(decapitalized_text)
+            st.session_state.actions_done.append("decapitalize")
 
-        if "poem query" in st.session_state.intents and st.session_state.generated_poem:
-            st.write("Sublime Agent: Answering your poem query...")
-            poem_query_response = handle_poem_query(st.session_state.generated_poem, user_query)
-            unique_id = str(uuid.uuid4())
-            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem_query_response})
-            st.write("Sublime Agent:")
-            st.write(poem_query_response)
-
-        if "general query" in st.session_state.intents:
-            st.write("Sublime Agent: Routing your query to GPT...")
-            response = openai.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
-                    {"role": "user", "content": user_query}
-                ]
-            )
-            gpt_response = response.choices[0].message.content.strip()
-            unique_id = str(uuid.uuid4())
-            st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": gpt_response})
-            st.write("Sublime Agent:")
-            st.write(gpt_response)
+        if "handle poem query" in st.session_state.intents and st.session_state.generated_poem and "handle poem query" not in st.session_state.actions_done:
+            st.write("Sublime Agent: Handling your query about the poem...")
+            response = handle_poem_query(st.session_state.generated_poem, user_query)
+            st.write(response)
+            st.session_state.actions_done.append("handle poem query")
 
     # Display conversation log
     st.header("Conversation Log")
