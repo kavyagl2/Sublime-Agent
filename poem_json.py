@@ -101,11 +101,11 @@ def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
         ],
         tools=tools,
         response_format={"type": "json_object"},
-        tool_choice={"type": "funtion", "function": {"name": {"generate_poem"}}}
+        tool_choice="required"
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call)
-    return (function_args["content"]), "This poem is an original creation by GPT-4"
+    function_args = json.loads(tool_call.function.arguments)
+    return (function_args.get("content")), "This poem is an original creation by GPT-4"
 
 # Function to manually trim the poem by merging alternate lines
 def trim_poem(poem):
@@ -117,11 +117,11 @@ def trim_poem(poem):
         ],
         tools=tools,
         response_format={"type": "json_object"},
-        tool_choice= {"type": "funtion", "function": {"name": {"trim_poem"}}}
+        tool_choice= "required"
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call)
-    return (function_args["trimmed_poem"])
+    function_args = json.loads(tool_call.function.arguments)
+    return (function_args.get("trimmed_poem"))
 
 # Function to capitalize text following "capitalize text"
 def recapitalize(text):
@@ -133,11 +133,11 @@ def recapitalize(text):
         ],
         tools=tools,
         response_format={"type": "json_object"},
-        tool_choice={"type": "funtion", "function": {"name": {"recapitalize"}}}
+        tool_choice="required"
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call)
-    return (function_args["capitalized_text"])
+    function_args = json.loads(tool_call.function.arguments)
+    return (function_args.get("capitalized_text"))
 
 # Function to decapitalize text following "decapitalize text"
 def decapitalize(text):
@@ -149,11 +149,11 @@ def decapitalize(text):
         ],
         tools=tools,
         response_format={"type": "json_object"},
-        tool_choice={"type": "funtion", "function": {"name": {"decapitalize"}}}
+        tool_choice="required"
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call)
-    return (function_args["decapitalized_text"])
+    function_args = json.loads(tool_call.function.arguments)
+    return (function_args.get("decapitalized_text"))
 
 # Function to handle queries about the generated poem
 def handle_poem_query(poem, user_query):
@@ -166,11 +166,11 @@ def handle_poem_query(poem, user_query):
         ],
         tools=tools,
         response_format={"type": "json_object"},
-        tool_choice={"type": "funtion", "function": {"name": {"handle_poem_query"}}}
+        tool_choice="required"
     )
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call)
-    return (function_args["content"])
+    function_args = json.loads(tool_call.function.arguments)
+    return (function_args.get("content"))
 
 # Function to determine the intents of the user's query using function calling
 def determine_intent(user_query):
@@ -211,12 +211,12 @@ def determine_intent(user_query):
         model="gpt-4-turbo",
         messages=messages,
         tools=[classify_tool],
-        tool_choice={"type": "funtion", "function": {"name": {"classify_intent"}}}
+        tool_choice="required"
     )
     
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call)
-    return (function_args["categories"])
+    function_args = json.loads(tool_call.function.arguments)
+    return (function_args.get("categories"))
 
 # Main Streamlit app
 def main():
@@ -255,7 +255,7 @@ def main():
             st.session_state.tone = st.selectbox("Tone:", ["formal", "informal", "serious", "light-hearted", "mysterious"], key="tone")
 
             if st.button("Generate Poem", key="generate_poem_button"):
-                poem, _ = generate_poem(user_query, st.session_state.style, st.session_state.mood, st.session_state.purpose, st.session_state.tone)
+                poem = generate_poem(user_query, st.session_state.style, st.session_state.mood, st.session_state.purpose, st.session_state.tone)
                 st.session_state.generated_poem = poem
                 st.session_state.actions_done.append("generate a poem")
 
