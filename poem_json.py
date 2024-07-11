@@ -14,78 +14,63 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Define tools for each function
 tools = [
     {
-        "type": "function",
-        "function": {
-            "name": "generate_poem",
-            "description": "Generate a poem with specified details.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string"},
-                    "style": {"type": "string"},
-                    "mood": {"type": "string"},
-                    "purpose": {"type": "string"},
-                    "tone": {"type": "string"}
-                },
-                "required": ["prompt"]
-            }
+        "name": "generate_poem",
+        "description": "Generate a poem with specified details.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string"},
+                "style": {"type": "string"},
+                "mood": {"type": "string"},
+                "purpose": {"type": "string"},
+                "tone": {"type": "string"}
+            },
+            "required": ["prompt"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "trim_poem",
-            "description": "Trim a given poem by merging alternate lines.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "poem": {"type": "string"}
-                },
-                "required": ["poem"]
-            }
+        "name": "trim_poem",
+        "description": "Trim a given poem by merging alternate lines.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "poem": {"type": "string"}
+            },
+            "required": ["poem"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "recapitalize",
-            "description": "Capitalize text.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string"}
-                },
-                "required": ["text"]
-            }
+        "name": "recapitalize",
+        "description": "Capitalize text.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            },
+            "required": ["text"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "decapitalize",
-            "description": "Decapitalize text.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string"}
-                },
-                "required": ["text"]
-            }
+        "name": "decapitalize",
+        "description": "Decapitalize text.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            },
+            "required": ["text"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "handle_poem_query",
-            "description": "Handle queries about the generated poem.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "poem": {"type": "string"},
-                    "user_query": {"type": "string"}
-                },
-                "required": ["poem", "user_query"]
-            }
+        "name": "handle_poem_query",
+        "description": "Handle queries about the generated poem.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "poem": {"type": "string"},
+                "user_query": {"type": "string"}
+            },
+            "required": ["poem", "user_query"]
         }
     }
 ]
@@ -99,13 +84,12 @@ def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
             {"role": "system", "content": "You are a creative poet."},
             {"role": "user", "content": prompt_details}
         ],
-        tools=tools,
         response_format={"type": "json_object"},
-        tool_choice="required"
+        functions= tools,
+        function_call="auto"
     )
-    tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
-    return (function_args.get("content")), "This poem is an original creation by GPT-4"
+    json_response = json.loads(response.choices[0].message.function_call.arguments)
+    return (json_response), "This poem is an original creation by GPT-4"
 
 # Function to manually trim the poem by merging alternate lines
 def trim_poem(poem):
@@ -115,13 +99,12 @@ def trim_poem(poem):
             {"role": "system", "content": "You are a helpful assistant that trims poems."},
             {"role": "user", "content": poem}
         ],
-        tools=tools,
+        functions= tools,
         response_format={"type": "json_object"},
-        tool_choice= "required"
+        function_call="auto"
     )
-    tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
-    return (function_args.get("trimmed_poem"))
+    json_response = json.loads(response.choices[0].message.function_call.arguments)
+    return (json_response)
 
 # Function to capitalize text following "capitalize text"
 def recapitalize(text):
@@ -131,13 +114,12 @@ def recapitalize(text):
             {"role": "system", "content": "You are a helpful assistant that capitalizes text."},
             {"role": "user", "content": text}
         ],
-        tools=tools,
+        functions= tools,
         response_format={"type": "json_object"},
-        tool_choice="required"
+        function_call="auto"
     )
-    tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
-    return (function_args.get("capitalized_text"))
+    json_response = json.loads(response.choices[0].message.function_call.arguments)
+    return (json_response)
 
 # Function to decapitalize text following "decapitalize text"
 def decapitalize(text):
@@ -147,13 +129,12 @@ def decapitalize(text):
             {"role": "system", "content": "You are a helpful assistant that decapitalizes text."},
             {"role": "user", "content": text}
         ],
-        tools=tools,
+        functions= tools,
         response_format={"type": "json_object"},
-        tool_choice="required"
+        function_call="auto"
     )
-    tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
-    return (function_args.get("decapitalized_text"))
+    json_response = json.loads(response.choices[0].message.function_call.arguments)
+    return (json_response)
 
 # Function to handle queries about the generated poem
 def handle_poem_query(poem, user_query):
@@ -164,21 +145,18 @@ def handle_poem_query(poem, user_query):
             {"role": "system", "content": "You are a helpful assistant that analyzes poems."},
             {"role": "user", "content": prompt}
         ],
-        tools=tools,
+        functions= tools,
         response_format={"type": "json_object"},
-        tool_choice="required"
+        function_call="auto"
     )
-    tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
-    return (function_args.get("content"))
+    json_response = json.loads(response.choices[0].message.function_call.arguments)
+    return (json_response)
 
 # Function to determine the intents of the user's query using function calling
 def determine_intent(user_query):
-    function_name = "classify_intent"
-    classify_tool = {
-        "type": "function",
-        "function": {
-            "name": function_name,
+    classify_tool = [
+        {
+            "name": 'classify_intent',
             "description": "Classify the user's query into one or more categories.",
             "parameters": {
                 "type": "object",
@@ -194,8 +172,7 @@ def determine_intent(user_query):
                 "required": ["categories"]
             }
         }
-    }
-
+]
     messages = [
         {
             "role": "system",
@@ -210,15 +187,14 @@ def determine_intent(user_query):
     response = openai.chat.completions.create(
         model="gpt-4-turbo",
         messages=messages,
-        tools=[classify_tool],
-        tool_choice="required"
+        functions= classify_tool,   
+        function_call="auto"
     )
     
-    tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)
-    return (function_args.get("categories"))
+    json_response = json.loads(response.choices[0].message.function_call.arguments)
+    return (json_response)
 
-# Main Streamlit app
+# Main Streamlit app    
 def main():
     st.title("Sublime Agent: A Versatile AI Poet")
 
