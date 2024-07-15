@@ -109,11 +109,11 @@ def handle_poem_query(poem, user_query):
 
 # Function to recapitalize text following "capitalize text"
 def recapitalize(text):
-    return text.upper
+    return text.upper()
 
 # Function to decapitalize text following "decapitalize text"
 def decapitalize(text):
-    return text.lower
+    return text.lower()
 
 # Function to manually trim the poem by merging alternate lines
 def trim_poem(poem):
@@ -188,61 +188,62 @@ def main():
                         st.write(poem)
                         st.caption(f"Source: {source}")
 
-                if "trim a poem" in st.session_state.intents and "trim a poem" not in st.session_state.actions_done and st.session_state.generated_poem:
-                    st.write("Sublime Agent: Trimming the poem as requested...")
-                    trimmed_poem = trim_poem(st.session_state.generated_poem)
-                    st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
-                    st.session_state.poem_state = "trimmed"
-                    st.session_state.actions_done.append("trim a poem")
-                    unique_id = str(uuid.uuid4())
-                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": trimmed_poem})
-                    st.write("Sublime Agent:")
-                    st.write(trimmed_poem)
+            if "trim a poem" in st.session_state.intents and "trim a poem" not in st.session_state.actions_done and st.session_state.generated_poem:
+                st.write("Sublime Agent: Trimming the poem as requested...")
+                trimmed_poem = trim_poem(st.session_state.generated_poem)
+                st.session_state.generated_poem = trimmed_poem  # Update the generated poem with the trimmed version
+                st.session_state.poem_state = "trimmed"
+                st.session_state.actions_done.append("trim a poem")
+                unique_id = str(uuid.uuid4())
+                st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": trimmed_poem})
+                st.write("Sublime Agent:")
+                st.write(trimmed_poem)
 
-                if "capitalize text" in st.session_state.intents and "capitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
-                    st.write("Sublime Agent: Capitalizing the text as requested...")
-                    capitalized_text = recapitalize(st.session_state.generated_poem)
-                    st.session_state.generated_poem = capitalized_text
-                    st.session_state.poem_state = "capitalized"
-                    st.session_state.actions_done.append("capitalize text")
-                    unique_id = str(uuid.uuid4())
-                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": capitalized_text})
-                    st.write("Sublime Agent:")
-                    st.write(capitalized_text)
+            if "capitalize text" in st.session_state.intents and "capitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
+                st.write("Sublime Agent: Capitalizing the text as requested...")
+                capitalized_text = recapitalize(st.session_state.generated_poem)
+                st.session_state.generated_poem = capitalized_text
+                st.session_state.poem_state = "capitalized"
+                st.session_state.actions_done.append("capitalize text")
+                unique_id = str(uuid.uuid4())
+                st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": capitalized_text})
+                st.write("Sublime Agent:")
+                st.write(capitalized_text)
 
-                if "decapitalize text" in st.session_state.intents and "decapitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
-                    st.write("Sublime Agent: Decapitalizing the text as requested...")
-                    decapitalized_text = decapitalize(st.session_state.generated_poem)
-                    st.session_state.generated_poem = decapitalized_text
-                    st.session_state.poem_state = "decapitalized"
-                    st.session_state.actions_done.append("decapitalize text")
-                    unique_id = str(uuid.uuid4())
-                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": decapitalized_text})
-                    st.write("Sublime Agent:")
-                    st.write(decapitalized_text)
+            if "decapitalize text" in st.session_state.intents and "decapitalize text" not in st.session_state.actions_done and st.session_state.generated_poem:
+                st.write("Sublime Agent: Decapitalizing the text as requested...")
+                decapitalized_text = decapitalize(st.session_state.generated_poem)
+                st.session_state.generated_poem = decapitalized_text
+                st.session_state.poem_state = "decapitalized"
+                st.session_state.actions_done.append("decapitalize text")
+                unique_id = str(uuid.uuid4())
+                st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": decapitalized_text})
+                st.write("Sublime Agent:")
+                st.write(decapitalized_text)
 
-                if "poem query" in st.session_state.intents and st.session_state.generated_poem:
-                    st.write("Sublime Agent: Answering your poem query...")
-                    poem_query_response = handle_poem_query(st.session_state.generated_poem, user_query)
-                    unique_id = str(uuid.uuid4())
-                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem_query_response})
-                    st.write("Sublime Agent:")
-                    st.write(poem_query_response)
+            if "poem query" in st.session_state.intents and st.session_state.generated_poem:
+                st.write("Sublime Agent: Answering your poem query...")
+                poem_query_response = handle_poem_query(st.session_state.generated_poem, user_query)
+                unique_id = str(uuid.uuid4())
+                st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": poem_query_response})
+                st.write("Sublime Agent:")
+                st.write(poem_query_response)
 
-                if "general query" in st.session_state.intents:
-                    st.write("Sublime Agent: Routing your query to GPT...")
-                    response = openai.chat.completions.create(
-                        model="gpt-4-turbo",
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
-                            {"role": "user", "content": user_query}
-                        ]
-                    )
-                    gpt_response = response.choices[0].message.content.strip()
-                    unique_id = str(uuid.uuid4())
-                    st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": gpt_response})
-                    st.write("Sublime Agent:")
-                    st.write(gpt_response)
+            if "general query" in st.session_state.intents:
+                st.write("Sublime Agent: Routing your query to GPT...")
+                response = openai.chat.completions.create(
+                    model="gpt-4-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Take user query and output relevant answer. If you don't know the answer, like a good AI assistant say, 'Sorry! I don't know the answer!'"},
+                        {"role": "user", "content": user_query}
+                    ]
+                )
+                gpt_response = response.choices[0].message.content.strip()
+                unique_id = str(uuid.uuid4())
+                st.session_state.conversation_log.append({"id": unique_id, "role": "system", "content": gpt_response})
+                st.write("Sublime Agent:")
+                st.write(gpt_response)
+                
         except Exception as e:
             handle_server_error(e)
         
