@@ -10,6 +10,7 @@ load_dotenv()
 # Set up OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+
 # Function to generate a poem from a prompt with specified details
 def generate_poem(prompt, style=None, mood=None, purpose=None, tone=None):
     prompt_details = f"Create a {style} poem with a {mood} mood for {purpose} in a {tone} tone:\n{prompt}"

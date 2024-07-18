@@ -112,7 +112,7 @@ def handle_poem_query(poem: str, user_query: str) -> str:
     function_args = json.loads(tool_call.function.arguments)
     return (function_args["content"])
 
-def determine_intent(user_query: str) -> list:
+def determine_intent(user_query):
     determineintent = "intentdetermination"
     """Determine the intent of the user's query."""
     tools = [
@@ -156,8 +156,8 @@ def determine_intent(user_query: str) -> list:
     )
 
     tool_call = response.choices[0].message.tool_calls[0]
-    function_args = json.loads(tool_call.function.arguments)["categories"]
-    return (function_args)
+    intents = json.loads(tool_call.function.arguments)["categories"]
+    return (intents)
 
 def main():
     st.title("Sublime Agent: A Versatile AI Poet")
