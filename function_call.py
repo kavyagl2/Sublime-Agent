@@ -210,26 +210,27 @@ def main():
 
     if 'recapitalize' in user_query:
         st.subheader("Recapitalize Text")
-        text = st.text_area("Enter the text to recapitalize:")
+        text = st.session_state.last_poem
         if st.button("Recapitalize"):
             recapitalized_text = recapitalize(text)
+            st.session_state.last_poem = recapitalized_text
             st.write("Recapitalized Text:")
             st.write(recapitalized_text)
 
     if 'decapitalize' in user_query:
         st.subheader("Decapitalize Text")
-        text = st.text_area("Enter the text to decapitalize:")
+        text = st.session_state.last_poem
         if st.button("Decapitalize"):
             decapitalized_text = decapitalize(text)
+            st.session_state.last_poem = decapitalized_text
             st.write("Decapitalized Text:")
             st.write(decapitalized_text)
 
     if 'handle_poem_query' in user_query:
         st.subheader("Handle Poem Query")
-        poem = st.text_area("Enter the poem:")
-        query = st.text_area("Enter your query about the poem:")
+        poem = st.session_state.last_poem
         if st.button("Handle Query"):
-            answer = handle_poem_query(poem, query)
+            answer = handle_poem_query(poem, user_query)
             st.write("Answer to Query:")
             st.write(answer)
 
