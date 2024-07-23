@@ -84,13 +84,6 @@ def conversation(user_query):
             "function": {
                 "name": "trim_poem",
                 "description": "Trim a poem by merging alternate lines.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "poem": {"type": "string"}
-                    },
-                    "required": ["poem"]
-                }
             }
         },
         {
@@ -98,13 +91,7 @@ def conversation(user_query):
             "function": {
                 "name": "recapitalize",
                 "description": "Capitalize the text as required and turn it into uppercase.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"}
-                    },
-                    "required": ["text"]
-                }
+                
             }
         },
         {
@@ -112,13 +99,7 @@ def conversation(user_query):
             "function": {
                 "name": "decapitalize",
                 "description": "Decapitalize the text as required and turn it into lowercase.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"}
-                    },
-                    "required": ["text"]
-                }
+
             }
         },
         {
@@ -137,7 +118,7 @@ def conversation(user_query):
             }
         }
     ]
-
+    print(messages)
     response = client.chat.completions.create(
         model="gpt-4-turbo",
         messages=messages,
@@ -146,6 +127,7 @@ def conversation(user_query):
     )
     response_message = response.choices[0].message
     tool_calls = response_message.tool_calls
+    print(tool_calls)
 
     available_functions = {
         "generate_poem": generate_poem,
@@ -154,10 +136,13 @@ def conversation(user_query):
         "decapitalize": decapitalize,
         "handle_poem_query": handle_poem_query
     }
-
+    if not tool_calls:
+        print("tool call broke")
     for tool_call in tool_calls:
         function_name = tool_call.function.name
+        print(function_name)
         function_to_call = available_functions[function_name]
+        print(function_to_call)
         function_args = json.loads(tool_call.function.arguments)
         result = function_to_call(**function_args)
         messages.append({"role": "system", "content": str(result)})
@@ -201,7 +186,7 @@ def main():
         st.subheader("Trim the Poem")
         if st.button("Trim Poem"):
             if st.session_state.last_poem:
-                trimmed_poem = trim_poem(st.session_state.last_poem)
+                trimmed_poem = trim_poem(poem=st.session_state.last_poem)
                 st.session_state.last_poem = trimmed_poem
                 st.write("Trimmed Poem:")
                 st.write(trimmed_poem)
