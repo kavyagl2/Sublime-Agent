@@ -112,89 +112,104 @@ def conversation(user_query):
             }
         }
     ]
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=messages,
-            tools=tools,
-            tool_choice="auto"
-        )
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
-
-        available_functions = {
-            "generate_poem": generate_poem,
-            "trim_poem": trim_poem,
-            "recapitalize": recapitalize,
-            "decapitalize": decapitalize,
-            "handle_poem_query": handle_poem_query
-        }
-        
-        results = []
-        
-        if not tool_calls:
-            results.append({"role": "system", "content": "No tool calls made. Check your query."})
-            return results
-        
-        for tool_call in tool_calls:
-            function_name = tool_call.function.name
-            function_to_call = available_functions[function_name]
-            function_args = json.loads(tool_call.function.arguments)
-            if function_name == "generate_poem":
-                function_args = {k: v for k, v in function_args.items() if v}  # Remove None values
-            result = function_to_call(**function_args)
-            results.append({"role": "system", "content": str(result)})
-        
-        return results
+    response = client.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=messages,
+        tools=tools,
+        tool_choice="auto"
+    )
+    response_message = response.choices[0].message
+    tool_calls = response_message.tool_calls
     
-    except Exception as e:
-        return [{"role": "system", "content": f"Error: {str(e)}"}]
+    available_functions = {
+        "generate_poem": generate_poem,
+        "trim_poem": trim_poem,
+        "recapitalize": recapitalize,
+        "decapitalize": decapitalize,
+        "handle_poem_query": handle_poem_query
+    }
+    if not tool_calls:
+        print("tool call broke")
+    results = []
+    for tool_call in tool_calls:
+        function_name = tool_call.function.name
+        function_to_call = available_functions[function_name]
+        function_args = json.loads(tool_call.function.arguments)
+        result = function_to_call(**function_args)
+        results.append({"function": function_name, "result": result})
+
+    return results
 
 # Streamlit app
 def main():
     st.title("Poetic AI Agent")
-
-    # State management for the last generated poem and conversation log
+    
+    # State management for the last generated poem
     if 'last_poem' not in st.session_state:
         st.session_state.last_poem = ""
-    if 'conversation_log' not in st.session_state:
-        st.session_state.conversation_log = []
 
     user_query = st.text_input("Enter your query:")
 
     if user_query:
-        conversation_response = conversation(user_query)
-        st.session_state.conversation_log.extend({"role": msg['role'], "content": msg['content']} for msg in conversation_response)
+        conversation_results = conversation(user_query)
+        for result in conversation_results:
+            function_name = result['function']
+            result_content = result['result']
+            
+            if function_name == "generate_poem":
+                st.session_state.last_poem = result_content
+                st.write("Generated Poem:")
+                st.write(result_content)
+                
+            elif function_name == "trim_poem":
+                st.session_state.last_poem = result_content
+                st.write("Trimmed Poem:")
+                st.write(result_content)
+                
+            elif function_name == "recapitalize":
+                st.session_state.last_poem = result_content
+                st.write("Recapitalized Text:")
+                st.write(result_content)
+                
+            elif function_name == "decapitalize":
+                st.session_state.last_poem = result_content
+                st.write("Decapitalized Text:")
+                st.write(result_content)
+                
+            elif function_name == "handle_poem_query":
+                st.write("Answer to Query:")
+                st.write(result_content)
 
     if 'generate_poem' in user_query:
         st.subheader("Customize Your Poem")
         style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"], key="select_style")
         mood = st.selectbox("Mood:", ["happy", "sad", "romantic", "inspirational", "nostalgic"], key="select_mood")
         purpose = st.selectbox("Purpose:",
-            [
-                "a gift", "personal reflection", "a celebration", "a memorial", "a story",
-                "parents", "siblings", "lovers", "friends", "children",
-                "colleagues", "a special occasion", "a wedding", "an anniversary",
-                "a birthday", "a graduation", "a farewell", "encouragement",
-                "appreciation", "apology", "condolence", "retirement",
-                "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
-            ], key="select_purpose")
+                              [
+                                  "a gift", "personal reflection", "a celebration", "a memorial", "a story",
+                                  "parents", "siblings", "lovers", "friends", "children",
+                                  "colleagues", "a special occasion", "a wedding", "an anniversary",
+                                  "a birthday", "a graduation", "a farewell", "encouragement",
+                                  "appreciation", "apology", "condolence", "retirement",
+                                  "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
+                              ], key="select_purpose")
         tone = st.selectbox("Tone:", ["formal", "informal", "serious", "humorous", "sentimental", "playful"], key="select_tone")
         prompt = st.text_area("Enter the poem prompt:")
 
         if st.button("Generate Poem"):
             poem = generate_poem(prompt, style, mood, purpose, tone)
             st.session_state.last_poem = poem
-            st.session_state.conversation_log.append({"role": "system", "content": "Generated Poem:\n" + poem})
+            st.write("Generated Poem:")
+            st.write(poem)
 
     if 'trim_poem' in user_query:
         st.subheader("Trim the Poem")
         if st.button("Trim Poem"):
             if st.session_state.last_poem:
-                trimmed_poem = trim_poem(poem=st.session_state.last_poem)
+                trimmed_poem = trim_poem(st.session_state.last_poem)
                 st.session_state.last_poem = trimmed_poem
-                st.session_state.conversation_log.append({"role": "system", "content": "Trimmed Poem:\n" + trimmed_poem})
+                st.write("Trimmed Poem:")
+                st.write(trimmed_poem)
             else:
                 st.write("No poem available to trim.")
 
@@ -204,7 +219,8 @@ def main():
         if st.button("Recapitalize"):
             recapitalized_text = recapitalize(text)
             st.session_state.last_poem = recapitalized_text
-            st.session_state.conversation_log.append({"role": "system", "content": "Recapitalized Text:\n" + recapitalized_text})
+            st.write("Recapitalized Text:")
+            st.write(recapitalized_text)
 
     if 'decapitalize' in user_query:
         st.subheader("Decapitalize Text")
@@ -212,18 +228,16 @@ def main():
         if st.button("Decapitalize"):
             decapitalized_text = decapitalize(text)
             st.session_state.last_poem = decapitalized_text
-            st.session_state.conversation_log.append({"role": "system", "content": "Decapitalized Text:\n" + decapitalized_text})
+            st.write("Decapitalized Text:")
+            st.write(decapitalized_text)
 
     if 'handle_poem_query' in user_query:
         st.subheader("Handle Poem Query")
         poem = st.session_state.last_poem
         if st.button("Handle Query"):
             answer = handle_poem_query(poem, user_query)
-            st.session_state.conversation_log.append({"role": "system", "content": "Answer to Query:\n" + answer})
-
-    st.subheader("Conversation Log")
-    for entry in st.session_state.conversation_log:
-        st.write(f"{entry['role']}: {entry['content']}")
+            st.write("Answer to Query:")
+            st.write(answer)
 
 if __name__ == "__main__":
     main()
