@@ -5,53 +5,44 @@ import json
 
 client = OpenAI()
 
-# Define options for selectboxes
-style_options = ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"]
-mood_options = ["happy", "sad", "romantic", "inspirational", "nostalgic"]
-purpose_options = [
-    "a gift", "personal reflection", "a celebration", "a memorial", "a story",
-    "parents", "siblings", "lovers", "friends", "children",
-    "colleagues", "a special occasion", "a wedding", "an anniversary",
-    "a birthday", "a graduation", "a farewell", "encouragement",
-    "appreciation", "apology", "condolence", "retirement",
-    "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
-]
-tone_options = ["formal", "informal", "serious", "humorous", "sentimental", "playful"]
-
 # Function to generate poem
 def generate_poem(prompt, default_style=None, default_mood=None, default_purpose=None, default_tone=None):
-    st.subheader("Customize Your Poem")
+    st.subheader("Customize Your Poem:")
     
-    # Function to get the index of an option or default to 0
-    def get_option_index(option_list, default_option):
-        if default_option in option_list:
-            return option_list.index(default_option)
-        return 0
+    style_options = ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"]
+    mood_options = ["happy", "sad", "romantic", "inspirational", "nostalgic"]
+    purpose_options = [
+        "a gift", "personal reflection", "a celebration", "a memorial", "a story",
+        "parents", "siblings", "lovers", "friends", "children",
+        "colleagues", "a special occasion", "a wedding", "an anniversary",
+        "a birthday", "a graduation", "a farewell", "encouragement",
+        "appreciation", "apology", "condolence", "retirement",
+        "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
+    ]
+    tone_options = ["formal", "informal", "serious", "humorous", "sentimental", "playful"]
 
+    # Get the index of the default option or set it to 0 if not found
     style = st.selectbox("Style:", style_options, key="select_style",
-                        index=get_option_index(style_options, default_style))
+                        index=style_options.index(default_style) if default_style in style_options else 0)
     mood = st.selectbox("Mood:", mood_options, key="select_mood",
-                        index=get_option_index(mood_options, default_mood))
+                        index=mood_options.index(default_mood) if default_mood in mood_options else 0)
     purpose = st.selectbox("Purpose:", purpose_options, key="select_purpose", 
-                        index=get_option_index(purpose_options, default_purpose))
+                        index=purpose_options.index(default_purpose) if default_purpose in purpose_options else 0)
     tone = st.selectbox("Tone:", tone_options, key="select_tone",
-                        index=get_option_index(tone_options, default_tone))
+                        index=tone_options.index(default_tone) if default_tone in tone_options else 0)
     
     if st.button("Generate Poem", key="generate_button"):
-        if all([style, mood, purpose, tone]):
-            prompt_details = f"Create a {style} poem with a {mood} mood for {purpose} in a {tone} tone:\n{prompt}"
-            response = openai.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a creative poet."},
-                    {"role": "user", "content": prompt_details}
-                ]
-            )
-            poem = response.choices[0].message.content.strip()
-            st.session_state.last_poem = poem
-            st.session_state.conversation_log.append({"role": "assistant", "content": poem})
-        else:
-            st.warning("Please select all customization options before generating the poem.")
+        prompt_details = f"Create a {style} poem with a {mood} mood for {purpose} in a {tone} tone:\n{prompt}"
+        response = openai.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "You are a creative poet."},
+                {"role": "user", "content": prompt_details}
+            ]
+        )
+        poem = response.choices[0].message.content.strip()
+        st.session_state.last_poem = poem
+        st.session_state.conversation_log.append({"role": "assistant", "content": poem})
 
 # Function to trim the poem
 def trim_poem():
@@ -183,9 +174,6 @@ def conversation(user_query):
         "handle_poem_query": handle_poem_query
     }
 
-    function_to_call = None
-    function_args = {}
-
     if tool_calls:
         for tool_call in tool_calls:
             function_name = tool_call.function.name
@@ -218,14 +206,15 @@ def main():
                     "default_style": function_args.get("style"),
                     "default_mood": function_args.get("mood"),
                     "default_purpose": function_args.get("purpose"),
-                    "default_tone": function_args.get("tone"),
+                    "default_tone": function_args.get("tone")
                 }
+                            
             # Calling the function with unpacked arguments
             function_to_call(**function_args)
         else:
             st.session_state.conversation_log.append({"role": "assistant", "content": "No function matched your query."})
 
-    # conversation log
+    # Display the conversation log
     st.header("Conversation Log")
     for i, message in enumerate(st.session_state.conversation_log):
         key = f"message_{i}"
@@ -233,7 +222,6 @@ def main():
             st.text_area(f"You:", message['content'], key=key)
         elif message['role'] == "assistant":
             st.text_area(f"Assistant:", message['content'], key=key)
-
 
 if __name__ == "__main__":
     main()
