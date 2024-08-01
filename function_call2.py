@@ -5,31 +5,37 @@ import json
 
 client = OpenAI()
 
+# Define options for selectboxes
+style_options = ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"]
+mood_options = ["happy", "sad", "romantic", "inspirational", "nostalgic"]
+purpose_options = [
+    "a gift", "personal reflection", "a celebration", "a memorial", "a story",
+    "parents", "siblings", "lovers", "friends", "children",
+    "colleagues", "a special occasion", "a wedding", "an anniversary",
+    "a birthday", "a graduation", "a farewell", "encouragement",
+    "appreciation", "apology", "condolence", "retirement",
+    "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
+]
+tone_options = ["formal", "informal", "serious", "humorous", "sentimental", "playful"]
+
 # Function to generate poem
 def generate_poem(prompt, default_style=None, default_mood=None, default_purpose=None, default_tone=None):
     st.subheader("Customize Your Poem")
     
-    style = st.selectbox("Style:", ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"], key = "select_style",
-                        index=0 if not default_style else ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"].index(default_style))
-    mood = st.selectbox("Mood:", ["happy", "sad", "romantic", "inspirational", "nostalgic"], key = "select_mood",
-                        index=0 if not default_mood else ["happy", "sad", "romantic", "inspirational", "nostalgic"].index(default_mood))
-    purpose = st.selectbox("Purpose:", [
-        "a gift", "personal reflection", "a celebration", "a memorial", "a story",
-        "parents", "siblings", "lovers", "friends", "children",
-        "colleagues", "a special occasion", "a wedding", "an anniversary",
-        "a birthday", "a graduation", "a farewell", "encouragement",
-        "appreciation", "apology", "condolence", "retirement",
-        "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
-    ], key = "select_purpose", index=0 if not default_purpose else [
-        "a gift", "personal reflection", "a celebration", "a memorial", "a story",
-        "parents", "siblings", "lovers", "friends", "children",
-        "colleagues", "a special occasion", "a wedding", "an anniversary",
-        "a birthday", "a graduation", "a farewell", "encouragement",
-        "appreciation", "apology", "condolence", "retirement",
-        "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
-    ].index(default_purpose))
-    tone = st.selectbox("Tone:", ["formal", "informal", "serious", "humorous", "sentimental", "playful"],key = "select_tone",
-                        index=0 if not default_tone else ["formal", "informal", "serious", "humorous", "sentimental", "playful"].index(default_tone))
+    # Function to get the index of an option or default to 0
+    def get_option_index(option_list, default_option):
+        if default_option in option_list:
+            return option_list.index(default_option)
+        return 0
+
+    style = st.selectbox("Style:", style_options, key="select_style",
+                        index=get_option_index(style_options, default_style))
+    mood = st.selectbox("Mood:", mood_options, key="select_mood",
+                        index=get_option_index(mood_options, default_mood))
+    purpose = st.selectbox("Purpose:", purpose_options, key="select_purpose", 
+                        index=get_option_index(purpose_options, default_purpose))
+    tone = st.selectbox("Tone:", tone_options, key="select_tone",
+                        index=get_option_index(tone_options, default_tone))
     
     if st.button("Generate Poem", key="generate_button"):
         if all([style, mood, purpose, tone]):
@@ -44,7 +50,6 @@ def generate_poem(prompt, default_style=None, default_mood=None, default_purpose
             poem = response.choices[0].message.content.strip()
             st.session_state.last_poem = poem
             st.session_state.conversation_log.append({"role": "assistant", "content": poem})
-
         else:
             st.warning("Please select all customization options before generating the poem.")
 
@@ -98,9 +103,10 @@ def handle_poem_query(user_query):
     else:
         st.session_state.conversation_log.append({"role": "assistant", "content": "No poem available to analyze."})
 
+# Function to determine the action and arguments
 def conversation(user_query):
     messages = [
-        {"role": "system", "content": "You are a poetic agent who analyzes the user query and then accordingly routes their query to available functions and generates the output."},
+        {"role": "system", "content": "You are a poetic agent who analyzes the user query and then routes their query to available functions to generate the output."},
         {"role": "user", "content": user_query}
     ]
 
@@ -148,7 +154,7 @@ def conversation(user_query):
             "type": "function",
             "function": {
                 "name": "handle_poem_query",
-                "description": "Handles user query when user prompts a different action to be performed apart from trimming, capitalizing, decapitalizing, and generating a poem.",
+                "description": "Handles user queries about the generated poem.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -159,6 +165,7 @@ def conversation(user_query):
             }
         }
     ]
+
     response = client.chat.completions.create(
         model="gpt-4-turbo",
         messages=messages,
@@ -176,20 +183,22 @@ def conversation(user_query):
         "handle_poem_query": handle_poem_query
     }
 
-    if not tool_calls:
-        st.write("No tool calls were made.")
-    for tool_call in tool_calls:
-        function_name = tool_call.function.name
-        function_to_call = available_functions[function_name]
-        function_args = json.loads(tool_call.function.arguments)
+    function_to_call = None
+    function_args = {}
 
+    if tool_calls:
+        for tool_call in tool_calls:
+            function_name = tool_call.function.name
+            function_to_call = available_functions[function_name]
+            function_args = json.loads(tool_call.function.arguments)
+    
     return function_to_call, function_args
 
 # Streamlit app
 def main():
     st.title("Poetic AI Agent")
 
-    # Initialize session state variables
+    # Initializing session state variables
     if 'last_poem' not in st.session_state:
         st.session_state.last_poem = ""
     if 'conversation_log' not in st.session_state:
@@ -201,27 +210,22 @@ def main():
         function_to_call, function_args = conversation(user_query)
         st.session_state.conversation_log.append({"role": "user", "content": user_query})
 
-        if function_to_call == generate_poem:
-            default_style = function_args.get("style")
-            default_mood = function_args.get("mood")
-            default_purpose = function_args.get("purpose")
-            default_tone = function_args.get("tone")
-            prompt = function_args.get("prompt")
-            generate_poem(prompt, default_style, default_mood, default_purpose, default_tone)
+        if function_to_call:
+            # Special handling for generate_poem to include specific arguments
+            if function_to_call == generate_poem:
+                function_args = {
+                    "prompt": function_args.get("prompt"),
+                    "default_style": function_args.get("style"),
+                    "default_mood": function_args.get("mood"),
+                    "default_purpose": function_args.get("purpose"),
+                    "default_tone": function_args.get("tone"),
+                }
+            # Calling the function with unpacked arguments
+            function_to_call(**function_args)
+        else:
+            st.session_state.conversation_log.append({"role": "assistant", "content": "No function matched your query."})
 
-        elif function_to_call == trim_poem:
-            trim_poem()
-
-        elif function_to_call == recapitalize:
-            recapitalize()
-
-        elif function_to_call == decapitalize:
-            decapitalize()
-
-        elif function_to_call == handle_poem_query:
-            handle_poem_query(user_query)
-
-    # Display conversation log
+    # conversation log
     st.header("Conversation Log")
     for i, message in enumerate(st.session_state.conversation_log):
         key = f"message_{i}"
@@ -229,6 +233,7 @@ def main():
             st.text_area(f"You:", message['content'], key=key)
         elif message['role'] == "assistant":
             st.text_area(f"Assistant:", message['content'], key=key)
+
 
 if __name__ == "__main__":
     main()
