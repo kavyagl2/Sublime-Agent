@@ -5,21 +5,22 @@ import json
 
 client = OpenAI()
 
+
 # Function to generate poem
 def generate_poem(prompt, default_style=None, default_mood=None, default_purpose=None, default_tone=None):
     st.subheader("Customize Your Poem:")
     
-    style_options = ["classic", "modern", "haiku", "free verse", "sonnet", "limerick"]
-    mood_options = ["happy", "sad", "romantic", "inspirational", "nostalgic"]
-    purpose_options = [
+    style_options = ["classic", "modern", "haiku", "free verse", "sonnet", "limerick", "None"]
+    mood_options = ["happy", "sad", "romantic", "inspirational", "nostalgic", "None"]
+    purpose_options = [ 
         "a gift", "personal reflection", "a celebration", "a memorial", "a story",
         "parents", "siblings", "lovers", "friends", "children",
         "colleagues", "a special occasion", "a wedding", "an anniversary",
         "a birthday", "a graduation", "a farewell", "encouragement",
         "appreciation", "apology", "condolence", "retirement",
-        "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time"
+        "a boss", "a team manager", "professional recognition", "a work anniversary", "leisure time", "None"
     ]
-    tone_options = ["formal", "informal", "serious", "humorous", "sentimental", "playful"]
+    tone_options = ["formal", "informal", "serious", "humorous", "sentimental", "playful", "None"]
 
     # Get the index of the default option or set it to 0 if not found
     style = st.selectbox("Style:", style_options, key="select_style",
@@ -111,10 +112,10 @@ def conversation(user_query):
                     "type": "object",
                     "properties": {
                         "prompt": {"type": "string"},
-                        "style": {"type": "string"},
-                        "mood": {"type": "string"},
-                        "purpose": {"type": "string"},
-                        "tone": {"type": "string"}
+                        "default_style": {"type": "string"},
+                        "default_mood": {"type": "string"},
+                        "default_purpose": {"type": "string"},
+                        "default_tone": {"type": "string"}
                     },
                     "required": ["prompt"]
                 }
@@ -195,21 +196,13 @@ def main():
     user_query = st.text_input("Enter your query:")
 
     if user_query:
-        function_to_call, function_args = conversation(user_query)
         st.session_state.conversation_log.append({"role": "user", "content": user_query})
-
+        function_to_call, function_args = conversation(user_query)
+        
+        
         if function_to_call:
-            # Special handling for generate_poem to include specific arguments
-            if function_to_call == generate_poem:
-                function_args = {
-                    "prompt": function_args.get("prompt"),
-                    "default_style": function_args.get("style"),
-                    "default_mood": function_args.get("mood"),
-                    "default_purpose": function_args.get("purpose"),
-                    "default_tone": function_args.get("tone")
-                }
-                            
-            # Calling the function with unpacked arguments
+            '''print(function_to_call)
+            print(function_args)'''
             function_to_call(**function_args)
         else:
             st.session_state.conversation_log.append({"role": "assistant", "content": "No function matched your query."})
